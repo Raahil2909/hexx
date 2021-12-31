@@ -1,193 +1,141 @@
 #!/usr/bin/python3
+
 from tkinter import *
-from PIL import ImageTk, Image
 from tkinter import messagebox as mb
 from tkinter import filedialog as fd
-from math import ceil
 from string import ascii_letters, digits, punctuation
 
-### Global vars ###
-fileName = ''
 
-### Create the window ####
-root = Tk()
-root.title('HexEdit')
-root.geometry('800x500')
+class Hexx:
+    def __init__(self, _root):
+        self.root = _root
+        self.root.title('Hexx')
+        self.root.geometry('800x500')
 
+        self.filename = ''
+        self.data = b''
 
-### Create components ###
-menuBar = Menu(root)
+        self.file_menu = Menu(self.root, tearoff=False, activebackground='DodgerBlue')
+        self.edit_menu = Menu(self.root, tearoff=False, activebackground='DodgerBlue')
+        self.help_menu = Menu(self.root, tearoff=False, activebackground='DodgerBlue')
 
+        self.file_menu.add_command(label='Open File', accelerator='Ctrl+O', command=self.open_file)
+        self.file_menu.add_command(label='Save File', accelerator='Ctrl+S', command=self.save_file)
+        self.file_menu.add_command(label='Save As', accelerator='Ctrl+Shift+S', command=self.save_file_as)
 
-### imp functions ###
-def openNewFile(event=1):
-    pass
+        self.edit_menu.add_command(label='Cut', accelerator='Ctrl+X', command=self.cut_text)
+        self.edit_menu.add_command(label='Copy', accelerator='Ctrl+C', command=self.copy_text)
+        self.edit_menu.add_command(label='Paste', accelerator='Ctrl+V', command=self.paste_text)
 
+        self.help_menu.add_command(label='About', accelerator='Ctrl+H', command=self.about_hexx)
 
-def formatData(data):
-    hexData = ''
-    ascii = ''
-    cnt = 0
-    for c in data:
-        # print(f'{c:0{2}x}', end='.')
-        cnt += 1
-        hexData += f'{c:0{2}x}'
-        if chr(c) in ascii_letters+punctuation+digits:
-            ascii += chr(c)
+        self.menu_bar = Menu(self.root)
+        self.menu_bar.add_cascade(label='File', menu=self.file_menu)
+        self.menu_bar.add_cascade(label='Edit', menu=self.edit_menu)
+        self.menu_bar.add_cascade(label='Help', menu=self.help_menu)
+
+        self.main_window = PanedWindow(self.root)
+        self.main_window.pack(fill=BOTH, expand=1)
+
+        self.addr_area = Text(self.main_window, relief=GROOVE, width=11, wrap=NONE)
+        self.hex_area = Text(self.main_window, relief=GROOVE, width=40, wrap=NONE)
+        self.ascii_area = Text(self.main_window, relief=GROOVE, width=17, wrap=NONE)
+        self.analysis_area = Text(self.main_window, relief=GROOVE, wrap=NONE)
+
+        self.main_window.add(self.addr_area)
+        self.main_window.add(self.hex_area)
+        self.main_window.add(self.ascii_area)
+        self.main_window.add(self.analysis_area)
+
+        self.root.config(menu=self.menu_bar)
+
+        self.shortcuts()
+
+    def show_formatted(self):
+        self.addr_area.delete(1.0, END)
+        self.hex_area.delete(1.0, END)
+        self.ascii_area.delete(1.0, END)
+
+        addr_data = f'0x{0:0{8}x}\n'
+        hex_data = ''
+        ascii_data = ''
+
+        cnt = 0
+        for c in self.data:
+            cnt += 1
+            hex_data += f'{c:0{2}x}'
+            if chr(c) in ascii_letters+punctuation+digits:
+                ascii_data += chr(c)
+            else:
+                ascii_data += '.'
+
+            if cnt & 1 == 0:
+                hex_data += ' '
+
+            if cnt % 16 == 0:
+                addr_data += f'0x{cnt:0{8}x}\n'
+                ascii_data += '\n'
+                hex_data += '\n'
+
+        self.addr_area.insert(1.0, addr_data)
+        self.hex_area.insert(1.0, hex_data)
+        self.ascii_area.insert(1.0, ascii_data)
+
+    def extract_data(self):
+        tmp = self.hex_area.get(1.0, END)
+        ftmp = b''
+        for c in tmp.split():
+            ftmp += (int(c[:2], 16)).to_bytes(1, byteorder='little')
+            if len(c) == 4:
+                ftmp += (int(c[2:], 16)).to_bytes(1, byteorder='little')
+        self.data = ftmp
+        pass
+
+    def open_file(self, *args):
+        self.filename = fd.askopenfilename(title='Select File')
+        if self.filename != '':
+            self.root.title(f'Hexx - {self.filename}')
+            with open(self.filename, 'rb') as f:
+                self.data = f.read()
+                self.show_formatted()
+                f.close()
+
+    def save_file(self, *args):
+        if self.filename == '':
+            self.save_file_as()
         else:
-            ascii += '.'
-        if cnt % 16 == 0:
-            ascii += ' '
+            self.extract_data()
+            with open(self.filename , 'wb') as f:
+                f.write(self.data)
+                f.close()
+                mb.showinfo('Saved', '[+] Successfully saved the file')
 
-        if cnt & 1 == 0:
-            hexData += ' '
+    def save_file_as(self, *args):
+        self.filename = fd.asksaveasfilename(title='Hehe')
+        self.save_file()
 
-    addr = ''
-    x = 0
-    for i in range(ceil(cnt/16)):
-        addr += f'0x{x:0{8}x} '
-        x += 0x10
+    def cut_text(self, *args):
+        self.hex_area.event_generate('<<Cut>>')
 
-    hexArea.insert(1.0, hexData)
-    addrArea.insert(1.0, addr)
-    asciiArea.insert(1.0, ascii)
+    def copy_text(self, *args):
+        self.hex_area.event_generate('<<Copy>>')
 
+    def paste_text(self, *args):
+        self.hex_area.event_generate('<<Paste>>')
 
-def openBinaryFile(event=1):
-    global fileName
-    fileName = fd.askopenfilename(title='Select File')
-    if str(fileName) != '()' or fileName != '':
-        root.title(f'HexEdit - {fileName}')
-        hexArea.delete(1.0, END)
-        with open(fileName, 'rb') as file:
-            data = file.read()
-            formatData(data)
-            file.close()
-    else:
-        fileName = ''
-        print('[-] no file name found')
+    def about_hexx(self, *args):
+        mb.showinfo('Info', 'This is a hex editor created by Raahil')
 
-def openFile(event=1):
-    global fileName
-    fileName = fd.askopenfilename(title='Select File')
-    print(f'{fileName=}, {type(fileName)}')
-    print(f'{str(fileName)}')
-    if str(fileName) != '()' or fileName != '':
-        root.title(f'HexEdit - {fileName}')
-        hexArea.delete(1.0, END)
-        with open(fileName, 'r') as file:
-            hexArea.insert(1.0, file.read())
-            file.close()
-    else:
-        fileName = ''
-        print('[-] no file name found')
+    def shortcuts(self):
+        self.root.bind("<Control-o>", self.open_file)
+        self.root.bind("<Control-s>", self.save_file)
+        self.root.bind("<Control-d>", self.save_file_as)
+        self.root.bind("<Control-x>", self.cut_text)
+        self.root.bind("<Control-c>", self.copy_text)
+        self.root.bind("<Control-p>", self.paste_text)
+        self.root.bind("<Control-h>", self.about_hexx)
 
 
-def saveFile(event=1):
-    global fileName
-    if fileName == '':
-        fileName = fd.asksaveasfilename(title='Select folder')
-        # print(fileName)
-
-    fp = open(fileName, 'w')
-    # print(textArea.get(1.0, END))
-    # print('----------')
-    fp.write(hexArea.get(1.0, END))
-    fp.close()
-    mb.showinfo('Success', '[+] File successfully saved')
-
-
-def saveFileAs(event=1):
-    fileName = fd.asksaveasfilename(title='Save File As', filetypes=[('All', '*.*')])
-    fp = open(fileName, 'w')
-    fp.write(hexArea.get(1.0, END))
-    fp.close()
-    root.title(f'HexEdit - {fileName}')
-    mb.showinfo('Success', '[+] File successfully saved')
-
-
-def copyText(event=1):
-    hexArea.event_generate('<<Copy>>')
-
-
-def cutText(event=1):
-    hexArea.event_generate('<<Cut>>')
-
-
-def pasteText(event=1):
-    hexArea.event_generate('<<Paste>>')
-
-
-def selectAllText(event=1):
-    pass
-    # textArea.event_generate('<<Control->>')
-
-
-def aboutHexedit(event=1):
-    mb.showinfo('Info', 'This is a hex editor created by Raahil')
-
-
-### menus ###
-editMenu = Menu(menuBar, tearoff=False, activebackground='DodgerBlue')
-fileMenu = Menu(menuBar, tearoff=False, activebackground='DodgerBlue')
-helpMenu = Menu(menuBar, tearoff=False, activebackground='DodgerBlue')
-
-fileMenu.add_command(label="New File", accelerator="Ctrl+N", command=openNewFile)
-fileMenu.add_command(label="Open File", accelerator="Ctrl+O", command=openFile)
-fileMenu.add_command(label="Open Binary File", accelerator="Ctrl+B", command=openBinaryFile)
-fileMenu.add_command(label="Save File", accelerator="Ctrl+S", command=saveFile)
-fileMenu.add_command(label="Save As", accelerator="Ctrl+Shift+S", command=saveFileAs)
-
-editMenu.add_command(label="Copy", accelerator="Ctrl+C", command=copyText)
-editMenu.add_command(label="Cut", accelerator="Ctrl+X", command=cutText)
-editMenu.add_command(label="Paste", accelerator="Ctrl+V", command=pasteText)
-editMenu.add_command(label="Select All", accelerator="Ctrl+A", command=selectAllText)
-
-helpMenu.add_command(label="About HexEdit", accelerator="Ctrl+H", command=aboutHexedit)
-
-
-### Add submenus ###
-menuBar.add_cascade(label="File", menu=fileMenu)
-menuBar.add_cascade(label="Edit", menu=editMenu)
-menuBar.add_cascade(label='Help', menu=helpMenu)
-
-mainW = PanedWindow(root)
-mainW.pack(fill=BOTH, expand=1)
-
-
-# scroll_y = Scrollbar(mainW, orient=VERTICAL, width=1)
-hexArea = Text(mainW, relief=GROOVE, width=40)
-asciiArea = Text(mainW, relief=GROOVE, width=17)
-addrArea = Text(mainW, relief=GROOVE, width=11)
-extraArea = Text(mainW, relief=GROOVE)
-
-mainW.add(addrArea)
-mainW.add(hexArea)
-mainW.add(asciiArea)
-mainW.add(extraArea)
-# mainW.add(scroll_y)
-
-# textArea.pack(side=LEFT, fill=Y, expand=1)
-# textArea2.pack(side=RIGHT, fill=Y, expand=1)
-# scroll_y.pack(side=LEFT, fill=Y)
-
-
-### Shortcuts ###
-root.bind('<Control-o>', openFile)
-root.bind('<Control-n>', openNewFile)
-root.bind('<Control-s>', saveFile)
-root.bind('<Control-Shift-s>', saveFileAs)
-root.bind('<Control-x>', cutText)
-root.bind('<Control-c>', copyText)
-root.bind('<Control-p>', pasteText)
-root.bind('<Control-h>', aboutHexedit)
-# textArea.bind('<Control->',)
-# textArea.bind('<Control->',)
-# textArea.bind('<Control->',)
-# textArea.bind('<Control->',)
-
-
-### render everything and inf loop ###
-root.config(menu=menuBar)
-# root.update() ## what does this do ????
+root = Tk()
+Hexx(root)
 root.mainloop()
