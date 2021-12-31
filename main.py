@@ -1,5 +1,3 @@
-#!/usr/bin/python3
-
 from tkinter import *
 from tkinter import messagebox as mb
 from tkinter import filedialog as fd
@@ -26,7 +24,6 @@ class Hexx:
         self.edit_menu.add_command(label='Cut', accelerator='Ctrl+X', command=self.cut_text)
         self.edit_menu.add_command(label='Copy', accelerator='Ctrl+C', command=self.copy_text)
         self.edit_menu.add_command(label='Paste', accelerator='Ctrl+V', command=self.paste_text)
-
         self.help_menu.add_command(label='About', accelerator='Ctrl+H', command=self.about_hexx)
 
         self.menu_bar = Menu(self.root)
@@ -37,10 +34,10 @@ class Hexx:
         self.main_window = PanedWindow(self.root)
         self.main_window.pack(fill=BOTH, expand=1)
 
-        self.addr_area = Text(self.main_window, relief=GROOVE, width=11, wrap=NONE)
-        self.hex_area = Text(self.main_window, relief=GROOVE, width=40, wrap=NONE)
-        self.ascii_area = Text(self.main_window, relief=GROOVE, width=17, wrap=NONE)
-        self.analysis_area = Text(self.main_window, relief=GROOVE, wrap=NONE)
+        self.addr_area = Text(self.main_window, relief=GROOVE, width=11, wrap=NONE, fg='#00ff00', bg='black')
+        self.hex_area = Text(self.main_window, relief=GROOVE, width=40, wrap=NONE, fg='#00ff00', bg='black')
+        self.ascii_area = Text(self.main_window, relief=GROOVE, width=17, wrap=NONE, fg='#00ff00', bg='black')
+        self.analysis_area = Text(self.main_window, relief=GROOVE, wrap=NONE, fg='#00ff00', bg='black')
 
         self.main_window.add(self.addr_area)
         self.main_window.add(self.hex_area)
@@ -109,6 +106,7 @@ class Hexx:
                 f.write(self.data)
                 f.close()
                 mb.showinfo('Saved', '[+] Successfully saved the file')
+                self.show_formatted()
 
     def save_file_as(self, *args):
         self.filename = fd.asksaveasfilename(title='Hehe')
