@@ -2,6 +2,7 @@ from tkinter import *
 from tkinter import messagebox as mb
 from tkinter import filedialog as fd
 from string import ascii_letters, digits, punctuation
+from png import Png, Chunk
 
 
 class Hexx:
